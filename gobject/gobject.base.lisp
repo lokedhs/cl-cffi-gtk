@@ -125,7 +125,7 @@
 
 (in-package :gobject)
 
-(defvar *foreign-gobjects-lock* (make-recursive-lock))
+(defvar *foreign-gobjects-lock* (make-recursive-lock "foreign gobjects lock"))
 (defvar *foreign-gobjects-weak*
   (make-weak-hash-table :test 'equal :weakness :value))
 (defvar *foreign-gobjects-strong*

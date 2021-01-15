@@ -312,6 +312,12 @@
 ;;;     window no longer exists
 ;;; ----------------------------------------------------------------------------
 
+(defcfun ("gtk_im_context_set_client_window" gtk-im-context-set-client-window) :void
+  (context (g-object gtk-im-context))
+  (window (g-object gdk-window)))
+
+(export 'gtk-im-context-set-client-window)
+
 ;;; ----------------------------------------------------------------------------
 ;;; gtk_im_context_get_preedit_string ()
 ;;;
@@ -359,6 +365,12 @@
 ;;; Returns :
 ;;;     TRUE if the input method handled the key event.
 ;;; ----------------------------------------------------------------------------
+
+(defcfun ("gtk_im_context_filter_keypress" gtk-im-context-filter-keypress) :boolean
+  (context (g-object gtk-im-context))
+  (event (g-boxed-foreign gdk-event)))
+
+(export 'gtk-im-context-filter-keypress)
 
 ;;; ----------------------------------------------------------------------------
 ;;; gtk_im_context_focus_in ()

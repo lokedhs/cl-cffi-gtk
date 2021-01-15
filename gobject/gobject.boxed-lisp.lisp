@@ -33,13 +33,17 @@
 (defvar *gboxed-gc-hooks* nil) ; pointers to objects to be freed
 
 (defun activate-gboxed-gc-hooks ()
-  (with-recursive-lock-held (*gboxed-gc-hooks-lock*)
-    (when *gboxed-gc-hooks*
-      (log-for :gc "activating gc hooks for boxeds: ~A~%" *gboxed-gc-hooks*)
-      (loop
-         for (pointer type) in *gboxed-gc-hooks*
-         do (boxed-free-fn type pointer))
-      (setf *gboxed-gc-hooks* nil))))
+  (let ((hooks-to-call (with-recursive-lock-held (*gboxed-gc-hooks-lock*)
+                         (when *gboxed-gc-hooks*
+                           (log-for :gc "activating gc hooks for boxeds: ~A~%" *gboxed-gc-hooks*)
+                           (let ((list (loop
+                                         for (pointer type) in *gboxed-gc-hooks*
+                                         collect (list type pointer))))
+                             (setf *gboxed-gc-hooks* nil)
+                             list)))))
+    (loop
+      for (type pointer) in hooks-to-call
+      do (boxed-free-fn type pointer))))
 
 ;(defcallback gboxed-idle-gc-hook :boolean ((data :pointer))
 ;  (declare (ignore data))
@@ -47,13 +51,16 @@
 ;  nil)
 
 (defun register-gboxed-for-gc (type pointer)
-  (with-recursive-lock-held (*gboxed-gc-hooks-lock*)
-    (let ((locks-were-present (not (null *gboxed-gc-hooks*))))
-      (push (list pointer type) *gboxed-gc-hooks*)
-      (unless locks-were-present
-        (log-for :gc "adding gboxed idle-gc-hook to main loop~%")
-        (g-idle-add #'activate-gboxed-gc-hooks)))))
-;        (glib::%g-idle-add (callback gboxed-idle-gc-hook) (null-pointer))))))
+  (let ((hook (with-recursive-lock-held (*gboxed-gc-hooks-lock*)
+                (let ((locks-were-present (not (null *gboxed-gc-hooks*))))
+                  (push (list pointer type) *gboxed-gc-hooks*)
+                  (unless locks-were-present
+                    (log-for :gc "adding gboxed idle-gc-hook to main loop~%")
+                    #'activate-gboxed-gc-hooks)))))
+    (when hook
+      (g-idle-add hook))))
+
+;;;        (glib::%g-idle-add (callback gboxed-idle-gc-hook) (null-pointer))))))
 
 ;;; ----------------------------------------------------------------------------
 
